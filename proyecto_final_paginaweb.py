@@ -16,7 +16,7 @@ from sklearn.neighbors import KNeighborsClassifier
 import pandas as pd
 
 # Título en la app
-st.title("dataset_estadistica.csv")
+st.title("Base de Datos de Predección de Satisfacción de Vida")
 
 # Función para cargar datos con caché
 @st.cache_data
