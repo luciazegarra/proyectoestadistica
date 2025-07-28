@@ -48,9 +48,17 @@ st.pyplot(fig2)
 columnas_requeridas = ['Edad', 'Ingreso_Mensual', 'Horas_Estudio_Semanal', 'Satisfaccion_Vida']
 if all(col in ds.columns for col in columnas_requeridas):
 
-    # Variables independientes y dependiente
+    # Filtrado de columnas relevantes
     X = ds[['Edad', 'Ingreso_Mensual', 'Horas_Estudio_Semanal']]
     y = ds['Satisfaccion_Vida']
+
+    # Limpieza: quitar NaN e infinitos
+    df_limpio = pd.concat([X, y], axis=1)
+    df_limpio.replace([np.inf, -np.inf], np.nan, inplace=True)
+    df_limpio.dropna(inplace=True)
+
+    X = df_limpio[['Edad', 'Ingreso_Mensual', 'Horas_Estudio_Semanal']]
+    y = df_limpio['Satisfaccion_Vida']
 
     # División del dataset
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
@@ -67,7 +75,7 @@ if all(col in ds.columns for col in columnas_requeridas):
     elif modelo_seleccionado == "KNN":
         modelo = KNeighborsRegressor(n_neighbors=5)
 
-    # Entrenar
+    # Entrenar modelo
     modelo.fit(X_train, y_train)
     y_pred = modelo.predict(X_test)
 
