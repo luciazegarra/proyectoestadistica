@@ -14,45 +14,71 @@ from sklearn.linear_model import LinearRegression
 from sklearn.neighbors import KNeighborsRegressor
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, r2_score
+from sklearn.preprocessing import StandardScaler
+
+# Configuración de página
+st.set_page_config(page_title="Predicción de Satisfacción de Vida", layout="wide")
 
 # Título principal
 st.title("🔍 Predicción de Satisfacción de Vida")
 
-# Función para cargar los datos con caché
+# Cargar datos
 @st.cache_data
 def cargar_datos():
     return pd.read_csv("dataset_estadistica.csv")
 
-# Cargar los datos
 ds = cargar_datos()
 
-# Mostrar columnas del dataset para verificar
+# Mostrar columnas
 st.write("📋 Columnas del dataset:", ds.columns.tolist())
 
 # Vista previa
 st.subheader("📌 Vista previa de los datos")
 st.dataframe(ds.head())
 
-# Visualización: pairplot solo con columnas numéricas
-st.subheader("📊 Relaciones entre variables numéricas")
-fig1 = sns.pairplot(ds.select_dtypes(include='number'))
+# Estadística descriptiva
+st.subheader("📊 Estadística Descriptiva de Variables Numéricas")
+st.dataframe(ds.describe())
+
+# Variables numéricas
+ds_num = ds.select_dtypes(include='number')
+
+# Pairplot
+st.subheader("📊 Relaciones entre variables numéricas (Pairplot)")
+fig1 = sns.pairplot(ds_num)
 st.pyplot(fig1)
 
 # Matriz de correlación
 st.subheader("📈 Matriz de correlación")
 fig2, ax2 = plt.subplots(figsize=(6, 4))
-sns.heatmap(ds.select_dtypes(include='number').corr(), annot=True, cmap="coolwarm", ax=ax2)
+sns.heatmap(ds_num.corr(), annot=True, cmap="coolwarm", ax=ax2)
 st.pyplot(fig2)
 
-# Verificar si las columnas necesarias están presentes
+# Histogramas + KDE
+st.subheader("📉 Distribuciones de variables numéricas")
+for columna in ds_num.columns:
+    fig, ax = plt.subplots()
+    sns.histplot(ds[columna], kde=True, ax=ax, color='skyblue')
+    ax.set_title(f"Distribución de {columna}")
+    st.pyplot(fig)
+
+# Boxplots
+st.subheader("📦 Boxplots de variables numéricas")
+for columna in ds_num.columns:
+    fig, ax = plt.subplots()
+    sns.boxplot(x=ds[columna], ax=ax, color='lightgreen')
+    ax.set_title(f"Boxplot de {columna}")
+    st.pyplot(fig)
+
+# Validación de columnas
 columnas_requeridas = ['Edad', 'Ingreso_Mensual', 'Horas_Estudio_Semanal', 'Satisfaccion_Vida']
 if all(col in ds.columns for col in columnas_requeridas):
 
-    # Filtrado de columnas relevantes
+    # Selección de variables
     X = ds[['Edad', 'Ingreso_Mensual', 'Horas_Estudio_Semanal']]
     y = ds['Satisfaccion_Vida']
 
-    # Limpieza: quitar NaN e infinitos
+    # Limpieza
     df_limpio = pd.concat([X, y], axis=1)
     df_limpio.replace([np.inf, -np.inf], np.nan, inplace=True)
     df_limpio.dropna(inplace=True)
@@ -60,14 +86,23 @@ if all(col in ds.columns for col in columnas_requeridas):
     X = df_limpio[['Edad', 'Ingreso_Mensual', 'Horas_Estudio_Semanal']]
     y = df_limpio['Satisfaccion_Vida']
 
-    # División del dataset
+    # División de datos
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-    # Sidebar: selector de modelo
+    # Sidebar: Selección de modelo
     st.sidebar.header("1️⃣ Selecciona el modelo de predicción")
     modelo_seleccionado = st.sidebar.selectbox("Modelo", ["Regresión Lineal", "Árbol de Decisión", "KNN"])
 
-    # Instanciar modelo
+    # Normalización solo para KNN
+    if modelo_seleccionado == "KNN":
+        scaler = StandardScaler()
+        X_train = scaler.fit_transform(X_train)
+        X_test = scaler.transform(X_test)
+        normalizador_aplicado = True
+    else:
+        normalizador_aplicado = False
+
+    # Crear modelo
     if modelo_seleccionado == "Regresión Lineal":
         modelo = LinearRegression()
     elif modelo_seleccionado == "Árbol de Decisión":
@@ -75,17 +110,19 @@ if all(col in ds.columns for col in columnas_requeridas):
     elif modelo_seleccionado == "KNN":
         modelo = KNeighborsRegressor(n_neighbors=5)
 
-    # Entrenar modelo
+    # Entrenamiento
     modelo.fit(X_train, y_train)
     y_pred = modelo.predict(X_test)
 
-    # Evaluación del modelo
+    # Resultados
     st.subheader("📋 Evaluación del modelo")
     st.write(f"🔧 Modelo seleccionado: **{modelo_seleccionado}**")
+    if normalizador_aplicado:
+        st.info("⚙️ Se aplicó normalización estándar porque se eligió KNN.")
     st.write("✅ Error Cuadrático Medio (MSE):", round(mean_squared_error(y_test, y_pred), 2))
     st.write("✅ Coeficiente de Determinación (R²):", round(r2_score(y_test, y_pred), 2))
 
-    # Gráfico de comparación real vs predicho
+    # Gráfico de comparación
     st.subheader("📌 Comparación: Valor real vs predicho")
     fig3, ax3 = plt.subplots()
     ax3.scatter(y_test, y_pred, alpha=0.6)
@@ -95,7 +132,7 @@ if all(col in ds.columns for col in columnas_requeridas):
     ax3.set_title("Comparación Real vs Predicción")
     st.pyplot(fig3)
 
-    # Formulario de predicción individual
+    # Formulario individual
     st.sidebar.header("2️⃣ Predecir nueva satisfacción de vida")
     Edad = st.sidebar.slider("Edad", 18, 80, 30)
     Ingreso = st.sidebar.slider("Ingreso Mensual (Bs)", 0, 10000, 3000)
@@ -103,6 +140,8 @@ if all(col in ds.columns for col in columnas_requeridas):
 
     if st.sidebar.button("🔮 Predecir"):
         entrada = np.array([[Edad, Ingreso, Hrs_Estudio]])
+        if normalizador_aplicado:
+            entrada = scaler.transform(entrada)
         pred_nueva = modelo.predict(entrada)
         st.sidebar.success(f"Nivel de satisfacción estimado: {pred_nueva[0]:.2f}")
 
