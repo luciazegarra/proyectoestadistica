@@ -45,11 +45,11 @@ sns.heatmap(ds.select_dtypes(include='number').corr(), annot=True, cmap="coolwar
 st.pyplot(fig2)
 
 # 🔧 Verifica que estas columnas EXISTAN
-columnas_requeridas = ['Edad', 'Ingreso_Mensual', 'Hrs_Estudio_Semanal', 'Satisfaccion_Vida']
+columnas_requeridas = ['Edad', 'Ingreso_Mensual', 'Horas_Estudio_Semanal', 'Satisfaccion_Vida']
 if all(col in ds.columns for col in columnas_requeridas):
 
     # Variables predictoras y objetivo
-    X = ds[['Edad', 'Ingreso_Mensual', 'Hrs_Estudio_Semanal']]
+    X = ds[['Edad', 'Ingreso_Mensual', 'Horas_Estudio_Semanal']]
     y = ds['Satisfaccion_Vida']
 
     # División de datos
